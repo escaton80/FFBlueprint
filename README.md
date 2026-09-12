@@ -1,4 +1,4 @@
-# FFBlueprint — User Manual
+# FFBlueprint — User Manual #
 
 FFBlueprint is a smart, zero-dependency command line builder for FFmpeg.
 It comes as a single, portable HTML file that works 100% offline in any browser. 
