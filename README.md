@@ -87,6 +87,8 @@ to guess track numbers:
 Use this to find e.g. which subtitle stream index to select, or whether your source
 is 8- or 10-bit.
 
+![Analyze Results](Analyze.png)
+
 ---
 
 ## 3. Video
@@ -140,6 +142,8 @@ the flag names shown in the generated command are the real per-encoder flags.
   which behaves like CRF (the bitrate floats to hit the chosen quality).
   Pair it with pixel format `p010le` (10-bit) for the full effect.
   Needs a recent GPU and driver — see Troubleshooting if a flag is rejected.
+
+  ![HW Encoding example with AMD AMF](AMD_AMF.png)
 
 ### Common video options (hidden for `copy`)
 
