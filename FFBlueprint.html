@@ -1,0 +1,1505 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FFBlueprint</title>
+<style>
+:root {
+  --bg: #eceff4;
+  --bg-dots: #d8dce6;
+  --surface: #ffffff;
+  --surface2: #f4f6f9;
+  --border: #c8ccd4;
+  --border-focus: #5a6e8a;
+  --text: #2e3440;
+  --text-dim: #6b7a90;
+  --text-muted: #9aa0b0;
+  --accent: #3b6fb6;
+  --accent2: #5a9e6f;
+  --green: #4c9a5e;
+  --red: #b64b4b;
+  --radius: 4px;
+  --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, system-ui, sans-serif;
+  --mono: 'Cascadia Code', 'Fira Code', 'Consolas', 'Courier New', monospace;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{
+  background:var(--bg);
+  background-image:radial-gradient(circle, var(--bg-dots) 1px, transparent 1px);
+  background-size:20px 20px;
+  color:var(--text);
+  font-family:var(--font);
+  line-height:1.5;
+  min-height:100vh;
+}
+.container{max-width:900px;margin:0 auto;padding:20px 16px 60px}
+header{text-align:center;padding:28px 0 14px}
+header h1{font-size:1.5em;color:var(--text);letter-spacing:-0.02em;font-family:var(--mono);font-weight:600}
+header h1 span{color:var(--accent)}
+.subtitle{color:var(--text-dim);font-size:0.8em;margin-top:2px;font-family:var(--mono)}
+.intro{color:var(--text-dim);font-size:0.85em;max-width:620px;margin:12px auto 0;line-height:1.55}
+.intro-req{color:var(--text-muted);font-size:0.75em;font-family:var(--mono);max-width:680px;margin:6px auto 0;line-height:1.6}
+.intro-req strong{color:var(--text-dim);font-weight:600}
+
+section{margin-bottom:12px}
+.section-title{
+  font-size:0.78em;font-weight:600;text-transform:uppercase;letter-spacing:0.1em;
+  color:var(--accent);margin-bottom:6px;padding-left:4px;
+  font-family:var(--mono);
+  border-left:3px solid var(--accent);padding-left:10px;
+}
+.card{
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:var(--radius);
+  padding:14px 16px;
+  box-shadow:0 1px 3px rgba(0,0,0,0.04);
+}
+
+/* Input/Output */
+.drop-zone{
+  border:2px dashed var(--border);border-radius:var(--radius);padding:20px;
+  text-align:center;cursor:pointer;transition:all .2s;background:var(--surface2);
+}
+.drop-zone:hover,.drop-zone.dragover{border-color:var(--accent);background:#e8edf5}
+.drop-zone-icon{font-size:1.6em;margin-bottom:4px}
+.drop-zone-text{font-size:0.85em;color:var(--text-dim);font-family:var(--mono)}
+.drop-zone-hint{font-size:0.72em;color:var(--text-muted);margin-top:2px}
+.drop-zone input[type=file]{display:none}
+
+.field-row{display:flex;gap:10px;align-items:flex-start;flex-wrap:wrap}
+.field-row>*{flex:1;min-width:120px}
+.field-group{margin-top:8px}
+.field-group label{
+  display:block;font-size:0.72em;color:var(--text-dim);margin-bottom:2px;
+  text-transform:uppercase;letter-spacing:0.06em;font-family:var(--mono);font-weight:500;
+}
+.field-group input[type=text],
+.field-group input[type=number],
+.field-group textarea,
+.field-group select{
+  width:100%;padding:6px 9px;
+  background:var(--surface2);
+  border:1px solid var(--border);
+  border-radius:var(--radius);
+  color:var(--text);font-size:0.85em;
+  font-family:var(--mono);
+  transition:border-color .15s;
+}
+.field-group input:focus,.field-group textarea:focus,.field-group select:focus{
+  outline:none;border-color:var(--border-focus);
+  box-shadow:0 0 0 2px rgba(59,111,182,0.12);
+}
+.field-group input[readonly]{opacity:0.6;cursor:default}
+
+/* Range slider */
+.range-row{display:flex;align-items:center;gap:10px;margin-top:4px}
+.range-row input[type=range]{flex:1;accent-color:var(--accent)}
+.range-value{color:var(--accent);font-family:var(--mono);font-size:0.85em;min-width:30px;text-align:center;font-weight:600}
+.range-hint{font-size:0.68em;color:var(--text-dim);text-align:right;margin-top:-2px}
+
+/* Radio group */
+.radio-group{display:flex;gap:3px;flex-wrap:wrap}
+.radio-group label{
+  padding:4px 10px;border:1px solid var(--border);border-radius:var(--radius);
+  cursor:pointer;font-size:0.78em;color:var(--text-dim);
+  transition:all .15s;background:var(--surface2);user-select:none;
+  font-family:var(--mono);
+}
+.radio-group label:hover{border-color:var(--accent);color:var(--text)}
+.radio-group input{display:none}
+.radio-group input:checked+label{background:var(--accent);color:#fff;border-color:var(--accent)}
+
+/* Checkbox row */
+.check-row{display:flex;gap:16px;flex-wrap:wrap;margin-top:6px}
+.check-row label{display:flex;align-items:center;gap:6px;font-size:0.82em;cursor:pointer;color:var(--text-dim);font-family:var(--mono)}
+.check-row input[type=checkbox]{accent-color:var(--accent);width:14px;height:14px}
+
+/* Separator */
+.sep{height:1px;background:var(--border);margin:10px 0}
+
+/* Command output */
+.cmd-box{position:relative;margin-top:6px}
+.cmd-box pre{
+  background:#1e2430;border:1px solid #2d3544;
+  border-radius:var(--radius);padding:12px 14px;
+  padding-right:76px; /* keep the first line clear of the floating Copy button */
+  font-family:var(--mono);font-size:0.8em;
+  overflow-x:auto;white-space:pre-wrap;word-break:break-all;
+  color:#c8d6e5;line-height:1.6;
+}
+.cmd-box .pass-label{
+  font-size:0.72em;color:var(--accent2);font-weight:600;margin-bottom:3px;
+  text-transform:uppercase;letter-spacing:0.06em;font-family:var(--mono);
+}
+.cmd-box .btn-copy{
+  position:absolute;top:6px;right:6px;padding:3px 10px;
+  background:var(--accent);color:#fff;border:none;
+  border-radius:var(--radius);cursor:pointer;font-size:0.74em;
+  font-family:var(--mono);transition:all .15s;
+}
+.cmd-box .btn-copy:hover{background:#2f5d9a}
+.cmd-box .btn-copy.copied{background:var(--green)}
+
+/* Copy all */
+.copy-all{display:flex;gap:8px;margin-top:8px;justify-content:flex-end}
+.copy-all button{
+  padding:5px 14px;background:var(--accent2);color:#fff;border:none;
+  border-radius:var(--radius);cursor:pointer;font-size:0.8em;
+  font-family:var(--mono);font-weight:500;transition:all .15s;
+}
+.copy-all button:hover{background:#488c5a}
+.copy-all button.copied{background:var(--green)}
+
+.hidden{display:none!important}
+.inline-label{font-size:0.7em;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.04em;white-space:nowrap;font-family:var(--mono)}
+.help-tip{font-size:0.72em;color:var(--text-muted);font-style:italic;margin-top:2px}
+
+/* Toast */
+.toast{
+  position:fixed;bottom:24px;left:50%;transform:translateX(-50%);
+  background:var(--green);color:#fff;padding:8px 20px;border-radius:20px;
+  font-size:0.82em;z-index:999;opacity:0;transition:opacity .2s;pointer-events:none;
+  font-family:var(--mono);
+}
+.toast.show{opacity:1}
+
+/* Analyze button & panel */
+.btn-analyze{
+  padding:5px 14px;background:var(--surface2);color:var(--accent);
+  border:1px solid var(--accent);border-radius:var(--radius);
+  cursor:pointer;font-size:0.8em;font-family:var(--mono);
+  transition:all .15s;
+}
+.btn-analyze:hover{background:var(--accent);color:#fff}
+.btn-analyze.active{background:var(--accent);color:#fff}
+
+#streamTable th,#streamTable td{padding:3px 8px;border-bottom:1px solid var(--border)}
+#streamTable td{color:var(--text);vertical-align:top}
+.stream-type{display:inline-block;padding:1px 6px;border-radius:3px;font-size:0.72em;font-weight:600;text-transform:uppercase}
+.stream-type.video{background:#d4e6ff;color:#1a4a8a}
+.stream-type.audio{background:#d4f0e0;color:#1a5a3a}
+.stream-type.subtitle{background:#f0e0d0;color:#6a4a1a}
+</style>
+</head>
+<body>
+<div class="container">
+
+<header>
+  <h1><span>FFBlueprint</span><br>A FFmpeg Command Builder</h1>
+  <div class="subtitle">// all encoders  ·  all options  ·  one line</div>
+  <p class="intro">Build a ready-to-run FFmpeg command: pick your settings, then copy the
+  generated command line below into your terminal. Nothing is uploaded or converted here &mdash;
+  the tool only writes the command.</p>
+  <p class="intro-req"><strong>Requirements:</strong> FFmpeg installed (a current full build &mdash;
+  hardware encoders and AV1 need a recent one) &middot; FFprobe for the optional Analyze Streams
+  and chapter helpers &middot; any modern browser, fully offline.</p>
+</header>
+
+<!-- ===== INPUT / OUTPUT ===== -->
+<section>
+  <div class="section-title">Input &amp; Output</div>
+  <div class="card">
+    <div class="drop-zone" id="dropZone">
+      <div class="drop-zone-icon">&#x1F3AC;</div>
+      <div class="drop-zone-text">Drop video file here</div>
+      <div class="drop-zone-hint">or click to browse &mdash; filename only (add path manually)</div>
+      <input type="file" id="fileInput">
+    </div>
+    <div class="field-row" style="margin-top:10px">
+      <div class="field-group">
+        <label>Input Path</label>
+        <input type="text" id="inputPath" placeholder="C:\videos\input.mp4" spellcheck="false">
+      </div>
+      <div class="field-group">
+        <label>Output Filename</label>
+        <input type="text" id="outputName" value="output.mkv" spellcheck="false">
+      </div>
+      <div class="field-group" style="flex:0 0 120px;min-width:110px">
+        <label>Container</label>
+        <select id="container">
+          <option value="mkv" selected>MKV (.mkv)</option>
+          <option value="mp4">MP4 (.mp4)</option>
+        </select>
+      </div>
+    </div>
+    <div class="help-tip" id="containerHint"></div>
+    <div style="margin-top:10px;display:flex;gap:8px;align-items:center">
+      <button id="btnAnalyze" class="btn-analyze">Analyze Streams (optional)</button>
+      <span id="analyzeHint" class="help-tip" style="margin-top:0">lists the tracks inside your file so you can pick the right ones &mdash; not required for building the command</span>
+    </div>
+    <div id="analyzePanel" class="hidden" style="margin-top:10px">
+      <div class="sep"></div>
+      <div id="analyzeProbe" class="cmd-box">
+        <div class="pass-label">Optional helper &mdash; run this command, paste the output below</div>
+        <pre id="analyzeProbeCmd"></pre>
+        <button class="btn-copy" data-target="analyzeProbeCmd">Copy</button>
+      </div>
+      <div class="field-group" style="margin-top:8px">
+        <label>Paste ffprobe output here</label>
+        <textarea id="analyzeOutput" rows="8" placeholder="Paste the ffprobe output..." spellcheck="false" style="width:100%;padding:7px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);font-size:0.82em;font-family:var(--mono);resize:vertical"></textarea>
+      </div>
+      <div id="analyzeResult" class="hidden" style="margin-top:8px">
+        <div class="pass-label" style="margin-bottom:6px">Streams detected</div>
+        <table id="streamTable" style="width:100%;border-collapse:collapse;font-family:var(--mono);font-size:0.8em">
+          <thead>
+            <tr style="text-align:left;border-bottom:2px solid var(--border)">
+              <th style="padding:4px 8px;color:var(--accent)">#</th>
+              <th style="padding:4px 8px;color:var(--accent)">Type</th>
+              <th style="padding:4px 8px;color:var(--accent)">Codec</th>
+              <th style="padding:4px 8px;color:var(--accent)">Details</th>
+            </tr>
+          </thead>
+          <tbody id="streamTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== VIDEO ===== -->
+<section>
+  <div class="section-title">Video</div>
+  <div class="card">
+    <div class="field-row">
+      <div class="field-group">
+        <label>Encoder</label>
+        <select id="encoder">
+          <optgroup label="Software">
+            <option value="libx264">H.264 (libx264)</option>
+            <option value="libx265">H.265 / HEVC (libx265)</option>
+            <option value="libvpx-vp9">VP9 (libvpx-vp9)</option>
+            <option value="libaom-av1">AV1 (libaom-av1)</option>
+            <option value="libsvtav1">AV1 SVT (libsvtav1)</option>
+            <option value="prores_ks">ProRes (prores_ks)</option>
+            <option value="copy">Copy (no re-encode)</option>
+          </optgroup>
+          <optgroup label="AMD AMF">
+            <option value="h264_amf">H.264 (h264_amf)</option>
+            <option value="hevc_amf">HEVC (hevc_amf)</option>
+            <option value="av1_amf">AV1 (av1_amf)</option>
+          </optgroup>
+          <optgroup label="Intel QSV">
+            <option value="h264_qsv">H.264 (h264_qsv)</option>
+            <option value="hevc_qsv">HEVC (hevc_qsv)</option>
+            <option value="av1_qsv">AV1 (av1_qsv)</option>
+          </optgroup>
+          <optgroup label="NVIDIA NVENC">
+            <option value="h264_nvenc">H.264 (h264_nvenc)</option>
+            <option value="hevc_nvenc">HEVC (hevc_nvenc)</option>
+            <option value="av1_nvenc">AV1 (av1_nvenc)</option>
+          </optgroup>
+        </select>
+      </div>
+      <div class="field-group" id="rateModeGroup">
+        <label>Rate Mode</label>
+        <div class="radio-group" id="rateModeRadio"></div>
+        <div class="help-tip">CRF = constant quality (recommended) &middot; 1-Pass = fixed bitrate &middot; 2-Pass = best size accuracy</div>
+      </div>
+    </div>
+
+    <!-- Software quality controls -->
+    <div id="swControls">
+      <div class="field-row" style="margin-top:8px">
+        <div class="field-group" id="swPresetGroup">
+          <label id="swPresetLabel">Preset</label>
+          <select id="swPreset"></select>
+        </div>
+        <div class="field-group" id="swTuneGroup">
+          <label>Tune</label>
+          <select id="swTune"></select>
+        </div>
+      </div>
+      <div id="crfSlider" class="field-group" style="margin-top:6px">
+        <label>CRF (<span id="crfLabel">23</span>) &mdash; <span id="crfRange">0 &ndash; 51</span></label>
+        <div class="range-row">
+          <span class="inline-label">Lossless</span>
+          <input type="range" id="crf" min="0" max="51" value="23" step="0.5">
+          <span class="inline-label">Worst</span>
+        </div>
+        <div class="range-value" style="text-align:center" id="crfDisplay">23</div>
+      </div>
+      <div id="bitrateSW" class="field-row hidden" style="margin-top:8px">
+        <div class="field-group">
+          <label>Video Bitrate</label>
+          <input type="text" id="bitrate" value="5M" placeholder="e.g. 5M, 2500k" spellcheck="false">
+        </div>
+        <div class="field-group">
+          <label>Max Rate (-maxrate)</label>
+          <input type="text" id="maxrate" placeholder="e.g. 8M" spellcheck="false">
+        </div>
+        <div class="field-group">
+          <label>Buf Size (-bufsize)</label>
+          <input type="text" id="bufsize" placeholder="e.g. 16M" spellcheck="false">
+        </div>
+      </div>
+    </div>
+
+    <!-- Hardware quality controls -->
+    <div id="hwControls" class="hidden">
+      <div class="field-row" style="margin-top:8px">
+        <div class="field-group">
+          <label>Rate Control</label>
+          <select id="hwRateControl"></select>
+        </div>
+        <div class="field-group" id="hwQPGroup">
+          <label>QP (<span id="hwQPLabel">23</span>)</label>
+          <div class="range-row">
+            <input type="range" id="hwQP" min="0" max="51" value="23">
+          </div>
+          <div class="range-value" style="text-align:center" id="hwQPDisplay">23</div>
+        </div>
+        <div class="field-group" id="hwPresetGroup">
+          <label id="hwPresetLabel">Preset</label>
+          <select id="hwPreset"></select>
+        </div>
+        <div id="hwBitrateGroup" class="hidden">
+          <div class="field-group">
+            <label>Video Bitrate</label>
+            <input type="text" id="hwBitrate" value="5M" placeholder="e.g. 5M" spellcheck="false">
+          </div>
+          <div class="field-group">
+            <label>Max Rate</label>
+            <input type="text" id="hwMaxrate" placeholder="e.g. 8M" spellcheck="false">
+          </div>
+          <div class="field-group">
+            <label>Buf Size</label>
+            <input type="text" id="hwBufsize" placeholder="e.g. 16M" spellcheck="false">
+          </div>
+        </div>
+      </div>
+      <div class="check-row" style="margin-top:8px">
+        <label><input type="checkbox" id="hwBoost"> Quality boost (better quality at same bitrate)</label>
+      </div>
+      <div class="help-tip" id="hwBoostHint"></div>
+    </div>
+
+    <!-- Common video options -->
+    <div id="videoCommon">
+      <div class="sep"></div>
+      <div class="field-row" style="margin-top:8px">
+        <div class="field-group">
+          <label>Resolution (W x H)</label>
+          <div style="display:flex;gap:6px;align-items:center">
+            <input type="text" id="width" placeholder="auto" style="width:70px;text-align:center">
+            <span style="color:var(--text-dim)">&times;</span>
+            <input type="text" id="height" placeholder="auto" style="width:70px;text-align:center">
+          </div>
+          <div class="help-tip">blank = keep original; -2 = auto-calc (keeps size even)</div>
+        </div>
+        <div class="field-group">
+          <label>Frame Rate (FPS)</label>
+          <select id="fps">
+            <option value="">keep original</option>
+            <option value="23.976">23.976</option>
+            <option value="24">24</option>
+            <option value="25">25</option>
+            <option value="29.97">29.97</option>
+            <option value="30">30</option>
+            <option value="50">50</option>
+            <option value="60">60</option>
+            <option value="custom">custom...</option>
+          </select>
+        </div>
+        <div id="customFpsGroup" class="field-group hidden">
+          <label>Custom FPS</label>
+          <input type="text" id="customFps" placeholder="e.g. 120" spellcheck="false">
+        </div>
+        <div class="field-group">
+          <label>Pixel Format</label>
+          <select id="pixelFormat">
+            <option value="">auto</option>
+            <option value="yuv420p">yuv420p (8-bit 4:2:0)</option>
+            <option value="yuv422p">yuv422p (8-bit 4:2:2)</option>
+            <option value="yuv444p">yuv444p (8-bit 4:4:4)</option>
+            <option value="yuv420p10le">yuv420p10le (10-bit)</option>
+            <option value="p010le">p010le (10-bit HW)</option>
+            <option value="nv12">nv12 (HW default)</option>
+          </select>
+        </div>
+        <div class="field-group">
+          <label>GOP Size (-g)</label>
+          <input type="number" id="gop" placeholder="auto" min="0">
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== AUDIO ===== -->
+<section>
+  <div class="section-title">Audio</div>
+  <div class="card">
+    <div class="field-row">
+      <div class="field-group">
+        <label>Codec</label>
+        <select id="audioCodec">
+          <option value="aac">AAC</option>
+          <option value="mp3">MP3 (libmp3lame)</option>
+          <option value="opus">Opus (libopus)</option>
+          <option value="flac">FLAC (lossless)</option>
+          <option value="ac3">AC-3</option>
+          <option value="copy">Copy (no re-encode)</option>
+          <option value="none">None (-an)</option>
+        </select>
+      </div>
+      <div class="field-group" id="audioBitrateGroup">
+        <label>Bitrate</label>
+        <select id="audioBitrate">
+          <option value="64k">64 kbps</option>
+          <option value="96k">96 kbps</option>
+          <option value="128k">128 kbps</option>
+          <option value="160k">160 kbps</option>
+          <option value="192k" selected>192 kbps</option>
+          <option value="256k">256 kbps</option>
+          <option value="320k">320 kbps</option>
+        </select>
+      </div>
+      <div class="field-group">
+        <label>Channels</label>
+        <select id="audioChannels">
+          <option value="">keep</option>
+          <option value="1">mono</option>
+          <option value="2">stereo</option>
+          <option value="6">5.1</option>
+        </select>
+      </div>
+      <div class="field-group">
+        <label>Sample Rate</label>
+        <select id="audioSampleRate">
+          <option value="">keep</option>
+          <option value="44100">44100 Hz</option>
+          <option value="48000">48000 Hz</option>
+        </select>
+      </div>
+      <div class="field-group" id="audioStreamGroup">
+        <label>Audio Stream</label>
+        <select id="audioStream">
+          <option value="">auto (first)</option>
+        </select>
+        <div class="help-tip">optional &mdash; Analyze Streams fills this list</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== SUBTITLES ===== -->
+<section>
+  <div class="section-title">Subtitles</div>
+  <div class="card">
+    <div class="field-row">
+      <div class="field-group">
+        <label>Subtitle Mode</label>
+        <select id="subMode">
+          <option value="drop">Drop (-sn)</option>
+          <option value="copy">Copy stream</option>
+          <option value="encode">Encode to codec</option>
+          <option value="burn">Burn into video</option>
+        </select>
+      </div>
+      <div class="field-group" id="subCodecGroup">
+        <label>Codec</label>
+        <select id="subCodec">
+          <option value="mov_text">mov_text (MP4)</option>
+          <option value="copy">copy</option>
+          <option value="srt">srt</option>
+          <option value="ass">ass</option>
+          <option value="webvtt">webvtt</option>
+        </select>
+      </div>
+      <div class="field-group" id="subStreamGroup">
+        <label>Subtitle Stream</label>
+        <select id="subStreamSel">
+          <option value="0:s:0">0:s:0 (first)</option>
+          <option value="custom">custom...</option>
+        </select>
+        <input type="text" id="subStream" value="0:s:0" class="hidden" spellcheck="false">
+        <div class="help-tip">optional &mdash; Analyze Streams fills this list</div>
+      </div>
+      <div class="field-group hidden" id="subBurnGroup">
+        <label>Subtitle File to Burn</label>
+        <input type="text" id="subBurnFile" placeholder="C:\subs\subtitles.srt" spellcheck="false">
+        <div class="help-tip">Will use -vf subtitles=...</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== EXTRA FLAGS ===== -->
+<section>
+  <div class="section-title">Extra</div>
+  <div class="card">
+    <div class="check-row">
+      <label><input type="checkbox" id="overwrite" checked> Overwrite (-y)</label>
+      <label><input type="checkbox" id="faststart"> Fast start (-movflags +faststart)</label>
+      <label><input type="checkbox" id="mapAll"> Map all streams (-map 0)</label>
+      <label><input type="checkbox" id="splitChapters"> Split by chapters</label>
+    </div>
+    <div id="chapterTimesGroup" class="hidden" style="margin-top:10px">
+      <div class="field-group">
+        <label>Paste ffprobe chapter output here</label>
+        <textarea id="chapterTimesRaw" rows="6" placeholder="0.000000&#10;312.360000&#10;636.920000&#10;1027.800000&#10;..." spellcheck="false" style="width:100%;padding:7px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);font-size:0.82em;font-family:var(--mono);resize:vertical"></textarea>
+        <div class="help-tip">Run the ffprobe below, paste all start times. First line (0.000) is skipped automatically.</div>
+      </div>
+    </div>
+    <div style="margin-top:8px">
+      <div class="field-group">
+        <label>Custom Arguments</label>
+        <input type="text" id="customArgs" placeholder="e.g. -ss 00:00:10 -t 00:01:00" spellcheck="false">
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== COMMAND ===== -->
+<section>
+  <div class="section-title">Generated Command</div>
+  <div class="card" id="commandSection">
+    <div id="pass1Box" class="cmd-box hidden">
+      <div class="pass-label">Pass 1 (run this first, in the same folder &mdash; it creates the log pass 2 needs)</div>
+      <pre id="pass1Cmd"></pre>
+      <button class="btn-copy" data-target="pass1Cmd">Copy</button>
+    </div>
+    <div id="pass2Box" class="cmd-box">
+      <div class="pass-label" id="pass2Label" style="display:none">Pass 2 (final)</div>
+      <pre id="pass2Cmd"></pre>
+      <button class="btn-copy" data-target="pass2Cmd">Copy</button>
+    </div>
+    <div class="copy-all" id="copyAllRow" style="display:none">
+      <button id="btnCopyAll">Copy Both Passes</button>
+    </div>
+    <div id="chapterProbeBox" class="cmd-box hidden" style="margin-top:12px">
+      <div class="pass-label">Chapter probe (run first, paste times into command)</div>
+      <pre id="chapterProbeCmd"></pre>
+      <button class="btn-copy" data-target="chapterProbeCmd">Copy</button>
+    </div>
+  </div>
+</section>
+
+</div>
+
+<div class="toast" id="toast">Copied!</div>
+
+<script>
+"use strict";
+
+const el = (id) => document.getElementById(id);
+const esc = (s) => String(s).replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+
+// ─── Encoder classifications ────────────────────────
+const HW_ENCODERS = new Set([
+  'h264_amf','hevc_amf','av1_amf',
+  'h264_qsv','hevc_qsv','av1_qsv',
+  'h264_nvenc','hevc_nvenc','av1_nvenc'
+]);
+const SW_ENCODERS = new Set([
+  'libx264','libx265','libvpx-vp9','libaom-av1','libsvtav1','prores_ks'
+]);
+
+function isHW(enc) { return HW_ENCODERS.has(enc); }
+function isSW(enc) { return SW_ENCODERS.has(enc); }
+
+// ─── Preset definitions ────────────────────────────
+const X264_PRESETS = [
+  'ultrafast','veryfast','fast','medium','slow','veryslow'
+];
+const X264_TUNES = [
+  'none','film','animation','grain','stillimage','psnr','ssim','fastdecode','zerolatency'
+];
+const VP9_DEADLINES = ['good','best','realtime'];
+const VP9_CPU_USED = ['0 (best/slow)','1','2','3','4','5 (fastest)'];
+const AV1_CPU_USED = ['0 (best/slow)','1','2','3','4','5','6','7','8 (fastest)'];
+const PRORES_PROFILES = ['proxy','lt','standard','hq','4444','4444xq'];
+const NVENC_PRESETS = ['p1 (fastest)','p2','p3','p4','p5','p6','p7 (slowest)'];
+const QSV_PRESETS = ['veryfast','fast','medium','slow','veryslow'];
+
+// HW encoder configs: rate control modes + preset options + flag names
+const HW_CONFIGS = {
+  // AMF has no flat -qp option: CQP needs -qp_i/-qp_p (plus -qp_b on h264/av1)
+  amf: {
+    rcModes: [['cqp','CQP'],['cbr','CBR'],['vbr','VBR (peak)']],
+    presetLabel: 'Quality',
+    presets: [['speed','speed (fastest)'],['balanced','balanced'],['quality','quality (slowest)']],
+    presetFlag: '-quality',
+    rcMap: { cqp:'cqp', cbr:'cbr', vbr:'vbr_peak' },
+  },
+  // QSV has no -rc switch: rate control is implied by the options used
+  // (ICQ via -global_quality; CBR when -maxrate equals -b:v; otherwise VBR)
+  qsv: {
+    rcModes: [['cqp','CQP / ICQ'],['cbr','CBR'],['vbr','VBR']],
+    presetLabel: 'Preset',
+    presets: QSV_PRESETS.map(p => [p,p]),
+    presetFlag: '-preset',
+    rcMap: null,
+    qpFlag: '-global_quality',
+  },
+  nvenc: {
+    rcModes: [['cqp','CQP'],['cbr','CBR'],['vbr','VBR']],
+    presetLabel: 'Preset',
+    presets: NVENC_PRESETS.map(p => [p.split(' ')[0], p]),
+    presetFlag: '-preset',
+    rcMap: { cqp:'constqp', cbr:'cbr', vbr:'vbr' },
+    qpFlag: '-qp',
+  },
+};
+
+const HW_BOOST_HINTS = {
+  nvenc: 'adds spatial+temporal AQ, lookahead 32, multipass qres, B-frames-as-refs; CQP becomes quality-VBR (-cq, like CRF). Needs Turing+ GPU and driver 530+. Pair with pixel format p010le.',
+  qsv: 'adds lookahead (extbrc 40), adaptive I/B placement, MB-level BRC and RDO. Pair with pixel format p010le.',
+  amf: 'adds preanalysis, VBAQ adaptive quantization and high-motion boost. Pair with pixel format p010le.',
+};
+
+// ─── Container compat ──────────────────────────────
+// Extensions this tool manages; switching Container swaps the output extension.
+const KNOWN_OUT_EXT = /\.(mp4|mkv|webm|mov|avi|ts|m4v|mpg|flv|ogv)$/i;
+// Subtitle codecs MP4 can hold; text subs (srt/ass) and webvtt need MKV or another container
+const MP4_SUB_CODECS = ['mov_text', 'copy'];
+
+function containerValue() { return el('container').value; }
+
+function applyContainerSync() {
+  const ext = containerValue() === 'mp4' ? '.mp4' : '.mkv';
+  const out = el('outputName');
+  const v = out.value.trim();
+  if (!v) out.value = 'output' + ext;
+  else if (KNOWN_OUT_EXT.test(v)) out.value = v.replace(KNOWN_OUT_EXT, ext);
+  else out.value = v + ext;
+}
+
+function getHwFamily(enc) {
+  if (enc.endsWith('_amf')) return 'amf';
+  if (enc.endsWith('_qsv')) return 'qsv';
+  if (enc.endsWith('_nvenc')) return 'nvenc';
+  return null;
+}
+
+// ─── CRF ranges per codec ──────────────────────────
+const CRF_RANGES = {
+  'libx264': [0,51,23], 'libx265': [0,51,28],
+  'libvpx-vp9': [0,63,31], 'libaom-av1': [0,63,30], 'libsvtav1': [0,63,35],
+};
+const DEFAULT_CRF = 23;
+let lastEncoder = null; // encoder whose preset/CRF defaults are currently built
+let analyzedStreams = []; // streams from the last successful Analyze Streams parse
+
+// ─── Build UI ──────────────────────────────────────
+function buildRateModeRadio() {
+  const g = el('rateModeRadio');
+  g.innerHTML = '';
+  const modes = [
+    ['crf','CRF'],
+    ['abr1','1-Pass'],
+    ['abr2','2-Pass'],
+  ];
+  modes.forEach(([val,label]) => {
+    g.insertAdjacentHTML('beforeend',
+      `<input type="radio" name="rateMode" value="${val}" id="rm_${val}"><label for="rm_${val}">${label}</label>`
+    );
+  });
+  document.querySelector('input[name="rateMode"][value="crf"]').checked = true;
+}
+
+function buildSwPresetOptions() {
+  const enc = el('encoder').value;
+  const sel = el('swPreset');
+  sel.innerHTML = '';
+  if (enc === 'libx264' || enc === 'libx265') {
+    el('swPresetLabel').textContent = 'Preset';
+    X264_PRESETS.forEach(p => { sel.add(new Option(p, p)); });
+    sel.value = 'medium';
+    el('swTuneGroup').classList.remove('hidden');
+    el('swTuneGroup').querySelector('label').textContent = 'Tune';
+    const tune = el('swTune');
+    tune.innerHTML = '';
+    X264_TUNES.forEach(t => { tune.add(new Option(t, t)); });
+    tune.value = 'none';
+  } else if (enc === 'libvpx-vp9') {
+    el('swPresetLabel').textContent = 'Deadline';
+    VP9_DEADLINES.forEach(d => { sel.add(new Option(d, d)); });
+    sel.value = 'good';
+    el('swTuneGroup').classList.remove('hidden');
+    el('swTuneGroup').querySelector('label').textContent = 'CPU-used';
+    const tune = el('swTune');
+    tune.innerHTML = '';
+    VP9_CPU_USED.forEach(c => {
+      const v = c.split(' ')[0];
+      tune.add(new Option(c, v));
+    });
+    tune.value = '0';
+  } else if (enc === 'libaom-av1') {
+    el('swPresetLabel').textContent = 'CPU-used';
+    AV1_CPU_USED.forEach(c => {
+      const v = c.split(' ')[0];
+      sel.add(new Option(c, v));
+    });
+    sel.value = '4';
+    el('swTuneGroup').classList.add('hidden');
+  } else if (enc === 'libsvtav1') {
+    el('swPresetLabel').textContent = 'Preset';
+    for (let i = 0; i <= 13; i++) {
+      const label = i <= 1 ? i + ' (best/slow)' : i >= 12 ? i + ' (fastest)' : String(i);
+      sel.add(new Option(label, String(i)));
+    }
+    sel.value = '8';
+    el('swTuneGroup').classList.add('hidden');
+  } else if (enc === 'prores_ks') {
+    el('swPresetLabel').textContent = 'Profile';
+    PRORES_PROFILES.forEach(p => { sel.add(new Option(p, p)); });
+    sel.value = 'standard';
+    el('swTuneGroup').classList.add('hidden');
+  }
+  updateCRFRange(enc);
+}
+
+function buildHwOptions() {
+  const enc = el('encoder').value;
+  const fam = getHwFamily(enc);
+  if (!fam) return;
+  const cfg = HW_CONFIGS[fam];
+
+  const rcSel = el('hwRateControl');
+  const prevRC = rcSel.value;
+  rcSel.innerHTML = '';
+  cfg.rcModes.forEach(([v,l]) => { rcSel.add(new Option(l, v)); });
+  rcSel.value = cfg.rcModes.some(([v]) => v === prevRC) ? prevRC : cfg.rcModes[0][0];
+
+  el('hwPresetLabel').textContent = cfg.presetLabel;
+  const presetSel = el('hwPreset');
+  const prevPreset = presetSel.value;
+  presetSel.innerHTML = '';
+  cfg.presets.forEach(([v,l]) => { presetSel.add(new Option(l, v)); });
+  const defaultIdx = Math.floor(cfg.presets.length / 2);
+  presetSel.value = cfg.presets.some(([v]) => v === prevPreset) ? prevPreset : cfg.presets[defaultIdx][0];
+
+  el('hwBoostHint').textContent = HW_BOOST_HINTS[fam] || '';
+}
+
+function updateCRFRange(enc) {
+  const range = CRF_RANGES[enc] || [0,51,DEFAULT_CRF];
+  const slider = el('crf');
+  slider.min = range[0];
+  slider.max = range[1];
+  slider.value = range[2];
+  el('crfLabel').textContent = range[2];
+  el('crfDisplay').textContent = range[2];
+  el('crfRange').textContent = `${range[0]} \u2013 ${range[1]}`;
+}
+
+// ─── Main update ───────────────────────────────────
+function updateUI() {
+  const enc = el('encoder').value;
+  const hw = isHW(enc);
+  const sw = isSW(enc);
+  const copy = enc === 'copy';
+
+  // Rate mode radio visibility
+  el('rateModeGroup').classList.toggle('hidden', hw || copy || enc === 'prores_ks');
+
+  // SW / HW / Copy sections
+  el('swControls').classList.toggle('hidden', !sw);
+  el('hwControls').classList.toggle('hidden', !hw);
+  el('videoCommon').classList.toggle('hidden', copy);
+
+  // Rebuild encoder-specific defaults only when the encoder itself changes,
+  // so unrelated edits never reset the CRF slider / preset picks
+  if (enc !== lastEncoder) {
+    if (sw) buildSwPresetOptions(); // also resets CRF to the codec default
+    if (hw) buildHwOptions();
+    lastEncoder = enc;
+  }
+
+  if (sw) {
+    const rm = document.querySelector('input[name="rateMode"]:checked')?.value || 'crf';
+    const crfOn = rm === 'crf';
+    el('crfSlider').classList.toggle('hidden', !crfOn);
+    el('bitrateSW').classList.toggle('hidden', crfOn);
+
+    // Hide crf for prores
+    if (enc === 'prores_ks') {
+      el('crfSlider').classList.add('hidden');
+      el('bitrateSW').classList.add('hidden');
+    }
+  }
+
+  if (hw) {
+    const rc = el('hwRateControl').value;
+    const isCQP = rc === 'cqp';
+    el('hwQPGroup').classList.toggle('hidden', !isCQP);
+    el('hwBitrateGroup').classList.toggle('hidden', isCQP);
+  }
+
+  // Audio
+  const ac = el('audioCodec').value;
+  el('audioBitrateGroup').classList.toggle('hidden', ac === 'none' || ac === 'copy' || ac === 'flac');
+
+  // Subtitles
+  const sm = el('subMode').value;
+  const mapAll = el('mapAll').checked;
+  el('subCodecGroup').classList.toggle('hidden', sm === 'drop' || sm === 'burn');
+  // with -map 0 all streams are kept, so per-type selectors don't apply
+  el('subStreamGroup').classList.toggle('hidden', sm === 'drop' || mapAll);
+  el('subBurnGroup').classList.toggle('hidden', sm !== 'burn');
+  el('audioStreamGroup').classList.toggle('hidden', mapAll);
+  el('subStream').classList.toggle('hidden', el('subStreamSel').value !== 'custom');
+
+  // Container compat: MP4 only holds mov_text text subs; Opus/FLAC audio is
+  // poorly supported by MP4 players; faststart is an MP4/MOV muxer feature
+  const isMp4 = containerValue() === 'mp4';
+  [...el('subCodec').options].forEach(o => {
+    if (!MP4_SUB_CODECS.includes(o.value)) o.hidden = isMp4;
+  });
+  if (isMp4 && !MP4_SUB_CODECS.includes(el('subCodec').value)) {
+    el('subCodec').value = 'mov_text';
+  }
+  const acForHint = el('audioCodec').value;
+  el('containerHint').textContent =
+    isMp4 && (acForHint === 'opus' || acForHint === 'flac')
+      ? 'Opus/FLAC audio in MP4 is not widely supported by players \u2014 use AAC/AC-3, or switch the container to MKV.'
+      : '';
+  const fsBox = el('faststart');
+  fsBox.disabled = !isMp4;
+  fsBox.parentElement.style.opacity = isMp4 ? '' : '0.5';
+
+  // FPS custom
+  el('customFpsGroup').classList.toggle('hidden', el('fps').value !== 'custom');
+
+  // Chapter split
+  el('chapterTimesGroup').classList.toggle('hidden', !el('splitChapters').checked);
+
+  updateCommand();
+}
+
+// ─── Command builder ───────────────────────────────
+function quote(s) {
+  if (!s) return '""';
+  return '"' + s + '"';
+}
+
+function num(val, fallback) {
+  const s = (val || '').trim().replace(/,/g, '.');
+  return s || fallback || '';
+}
+
+function doubleBitrate(v) {
+  const m = /^([\d.]+)\s*([kKmMgG]?)$/.exec((v || '').trim());
+  return m ? (parseFloat(m[1]) * 2) + m[2] : '';
+}
+
+// Quality-boost extras per hardware encoder: adaptive quantization, lookahead
+// and multipass — the flags that narrow the quality gap to software encoders.
+// Gated per encoder because the AV1 variants don't take every flag.
+function hwQualityBoostFlags(enc) {
+  const fam = getHwFamily(enc);
+  if (fam === 'nvenc') {
+    const f = ['-spatial-aq 1', '-temporal-aq 1', '-aq-strength 8', '-rc-lookahead 32', '-multipass qres'];
+    // B-frames: HEVC from Turing, H.264 from Ampere, none for AV1
+    if (enc === 'hevc_nvenc') f.push('-bf 3', '-b_ref_mode middle');
+    else if (enc === 'h264_nvenc') f.push('-bf 2');
+    return f;
+  }
+  if (fam === 'qsv') {
+    const f = [];
+    if (enc === 'h264_qsv') f.push('-look_ahead 1'); // with -global_quality this becomes LA-ICQ
+    f.push('-extbrc 1', '-look_ahead_depth 40', '-b_strategy 1', '-adaptive_i 1', '-adaptive_b 1');
+    if (enc !== 'av1_qsv') f.push('-mbbrc 1', '-rdo 1');
+    return f;
+  }
+  if (fam === 'amf') {
+    const f = ['-preanalysis 1', '-high_motion_quality_boost_enable 1'];
+    if (enc !== 'av1_amf') f.push('-vbaq 1');
+    return f;
+  }
+  return [];
+}
+
+function buildCommand() {
+  const input = el('inputPath').value.trim().replace(/^"|"$/g, '');
+  const output = el('outputName').value.trim() || 'output.mkv';
+  const enc = el('encoder').value;
+  const hw = isHW(enc);
+  const sw = isSW(enc);
+  const copy = enc === 'copy';
+  const rm = document.querySelector('input[name="rateMode"]:checked')?.value || 'crf';
+
+  // Base parts (reusable)
+  let baseParts = [];
+
+  // overwrite
+  if (el('overwrite').checked) baseParts.push('-y');
+
+  // input
+  if (input) baseParts.push('-i ' + quote(input));
+  else baseParts.push('-i ' + quote('input.mp4'));
+
+  // map all
+  if (el('mapAll').checked) baseParts.push('-map 0');
+
+  // ── Video args ──
+  let videoArgs = [];
+  if (copy) {
+    videoArgs.push('-c:v copy');
+  } else if (sw) {
+    videoArgs.push('-c:v ' + enc);
+
+    if (rm === 'crf' && enc !== 'prores_ks') {
+      videoArgs.push('-crf ' + el('crf').value);
+    } else if ((rm === 'abr1' || rm === 'abr2') && enc !== 'prores_ks') {
+      videoArgs.push('-b:v ' + (num(el('bitrate').value, '5M')));
+      const mr = num(el('maxrate').value);
+      const bs = num(el('bufsize').value);
+      if (mr) videoArgs.push('-maxrate ' + mr);
+      if (bs) videoArgs.push('-bufsize ' + bs);
+    }
+
+    // preset / deadline / cpu-used / profile
+    const presetVal = el('swPreset').value;
+    if (enc === 'libx264' || enc === 'libx265') {
+      videoArgs.push('-preset ' + presetVal);
+      const tuneVal = el('swTune').value;
+      if (tuneVal && tuneVal !== 'none') videoArgs.push('-tune ' + tuneVal);
+    } else if (enc === 'libvpx-vp9') {
+      videoArgs.push('-deadline ' + presetVal);
+      const cpu = el('swTune').value;
+      if (cpu) videoArgs.push('-cpu-used ' + cpu);
+    } else if (enc === 'libaom-av1') {
+      videoArgs.push('-cpu-used ' + presetVal);
+    } else if (enc === 'libsvtav1') {
+      videoArgs.push('-preset ' + presetVal);
+    } else if (enc === 'prores_ks') {
+      videoArgs.push('-profile:v ' + presetVal);
+    }
+  } else if (hw) {
+    videoArgs.push('-c:v ' + enc);
+    const fam = getHwFamily(enc);
+    const cfg = HW_CONFIGS[fam];
+    const rc = el('hwRateControl').value;
+    const boost = el('hwBoost').checked;
+    // With boost, NVENC CQP switches to quality-mode VBR: -cq behaves like
+    // CRF (bitrate floats) and looks better than constant QP
+    if (cfg.rcMap) {
+      const rcVal = (boost && fam === 'nvenc' && rc === 'cqp') ? 'vbr' : cfg.rcMap[rc];
+      videoArgs.push('-rc ' + rcVal);
+    }
+    if (rc === 'cqp') {
+      if (fam === 'amf') {
+        const qp = el('hwQP').value;
+        videoArgs.push('-qp_i ' + qp, '-qp_p ' + qp);
+        if (enc === 'h264_amf' || enc === 'av1_amf') videoArgs.push('-qp_b ' + qp);
+      } else if (fam === 'nvenc' && boost) {
+        videoArgs.push('-cq ' + el('hwQP').value, '-b:v 0');
+      } else {
+        videoArgs.push(cfg.qpFlag + ' ' + el('hwQP').value);
+      }
+    } else {
+      const hwbr = num(el('hwBitrate').value, '5M');
+      videoArgs.push('-b:v ' + hwbr);
+      let hmr = num(el('hwMaxrate').value);
+      let hbs = num(el('hwBufsize').value);
+      // QSV turns on CBR itself when maxrate equals the bitrate
+      if (fam === 'qsv' && rc === 'cbr') {
+        if (!hmr) hmr = hwbr;
+        if (!hbs) hbs = doubleBitrate(hwbr);
+      }
+      if (hmr) videoArgs.push('-maxrate ' + hmr);
+      if (hbs) videoArgs.push('-bufsize ' + hbs);
+    }
+    videoArgs.push(cfg.presetFlag + ' ' + el('hwPreset').value);
+    if (boost) videoArgs.push(...hwQualityBoostFlags(enc));
+  }
+
+  // Common video
+  let vfFilters = [];
+  if (!copy) {
+    const w = el('width').value.trim();
+    const h = el('height').value.trim();
+    if (w || h) {
+      // -2 auto-calcs while keeping the dimension even (required by yuv420p)
+      vfFilters.push('scale=' + (w || '-2') + ':' + (h || '-2'));
+    }
+    const f = el('fps').value;
+    if (f) {
+      videoArgs.push('-r ' + (f === 'custom' ? (el('customFps').value || '30') : f));
+    }
+    const pix = el('pixelFormat').value;
+    if (pix) videoArgs.push('-pix_fmt ' + pix);
+    const g = el('gop').value.trim();
+    if (g) videoArgs.push('-g ' + g);
+  }
+
+  // ── Audio args ──
+  let audioArgs = [];
+  const ac = el('audioCodec').value;
+  if (ac === 'none') {
+    audioArgs.push('-an');
+  } else if (ac === 'copy') {
+    audioArgs.push('-c:a copy');
+  } else {
+    audioArgs.push('-c:a ' + ac);
+    if (ac !== 'flac') {
+      audioArgs.push('-b:a ' + el('audioBitrate').value);
+    }
+    const ch = el('audioChannels').value;
+    if (ch) audioArgs.push('-ac ' + ch);
+    const sr = el('audioSampleRate').value;
+    if (sr) audioArgs.push('-ar ' + sr);
+  }
+
+  // ── Subtitle args ──
+  let subArgs = [];
+  const sm = el('subMode').value;
+  const mapAll = el('mapAll').checked;
+  if (sm === 'drop') {
+    subArgs.push('-sn');
+  } else if (sm === 'copy') {
+    subArgs.push('-c:s copy');
+  } else if (sm === 'encode') {
+    subArgs.push('-c:s ' + el('subCodec').value);
+  } else if (sm === 'burn') {
+    if (!copy) {
+      const subFile = el('subBurnFile').value.trim();
+      if (subFile) {
+        const escaped = subFile.replace(/\\/g, '/').replace(/[':,]/g, c => '\\' + c);
+        vfFilters.push('subtitles=' + escaped);
+      }
+    }
+  }
+
+  // emit combined -vf if any filters
+  const vfArg = vfFilters.length > 0 ? '-vf ' + quote(vfFilters.join(',')) : '';
+  if (vfArg) videoArgs.push(vfArg);
+
+  // ── Explicit stream maps ──
+  // FFmpeg disables automatic stream selection the moment any -map is used,
+  // so video must be mapped explicitly alongside audio/subtitle picks.
+  let mapArgs = [];
+  if (!mapAll) {
+    const aSel = el('audioStream').value;
+    if (aSel && ac !== 'none') mapArgs.push('-map ' + aSel);
+    if (sm === 'copy' || sm === 'encode') {
+      const sSel = el('subStreamSel').value === 'custom'
+        ? (el('subStream').value.trim() || '0:s:0')
+        : el('subStreamSel').value;
+      mapArgs.push('-map ' + sSel);
+    }
+    if (mapArgs.length) mapArgs.unshift('-map 0:v:0');
+  }
+
+  // ── Extra ──
+  let extraArgs = [];
+  // +faststart is an MP4-family muxer flag; silently ignored for MKV
+  if (el('faststart').checked && containerValue() === 'mp4') extraArgs.push('-movflags +faststart');
+  const cust = el('customArgs').value.trim();
+  if (cust) extraArgs.push(cust);
+
+  // Chapter split
+  const splitChap = el('splitChapters').checked;
+  let finalOutput = output;
+  let chapterProbeCmd = '';
+  if (splitChap) {
+    const dot = output.lastIndexOf('.');
+    if (dot > 0) {
+      finalOutput = output.slice(0, dot) + '_%03d' + output.slice(dot);
+    } else {
+      finalOutput = output + '_%03d';
+    }
+    const rawTimes = el('chapterTimesRaw').value.trim();
+    if (rawTimes) {
+      const times = rawTimes.split(/[\r\n]+/).map(t => t.trim()).filter(t => t).slice(1);
+      if (times.length > 0) {
+        extraArgs.push('-f segment -segment_times ' + times.join(',') + ' -reset_timestamps 1');
+      }
+    }
+    const inputFile = input || 'input.mp4';
+    chapterProbeCmd = 'ffprobe -v error -show_entries chapter=start_time -of default=noprint_wrappers=1:nokey=1 ' + quote(inputFile);
+  }
+
+  // Build full command
+  const allParts = [...baseParts, ...videoArgs, ...audioArgs, ...subArgs, ...mapArgs, ...extraArgs];
+  const cmd = 'ffmpeg ' + allParts.join(' ') + ' ' + quote(finalOutput);
+
+  // 2-pass variant
+  const twoPass = rm === 'abr2' && sw && enc !== 'prores_ks';
+  let pass1Cmd = '';
+  let pass2Cmd = '';
+  if (twoPass) {
+    // Pass 1: analysis only — keep scale (it changes frame stats), drop the
+    // subtitles filter, skip audio/subs, write to the null muxer
+    const p1Filters = vfFilters.filter(f => !f.startsWith('subtitles'));
+    const p1VideoArgs = vfArg ? videoArgs.filter(a => a !== vfArg) : videoArgs;
+    if (p1Filters.length > 0) p1VideoArgs.push('-vf ' + quote(p1Filters.join(',')));
+    const p1 = [...baseParts, ...p1VideoArgs, '-pass 1', '-an', '-sn', '-f null'];
+    pass1Cmd = 'ffmpeg ' + p1.join(' ') + ' NUL';
+
+    // Pass 2: final encode with audio + subtitles
+    const p2 = [...baseParts, ...videoArgs, '-pass 2', ...audioArgs, ...subArgs, ...mapArgs, ...extraArgs];
+    pass2Cmd = 'ffmpeg ' + p2.join(' ') + ' ' + quote(finalOutput);
+  }
+
+  return { cmd, pass1Cmd, pass2Cmd, chapterProbeCmd, isTwoPass: twoPass };
+}
+
+function updateCommand() {
+  const { cmd, pass1Cmd, pass2Cmd, chapterProbeCmd, isTwoPass } = buildCommand();
+
+  el('pass2Cmd').textContent = isTwoPass ? pass2Cmd : cmd;
+  el('pass2Label').style.display = isTwoPass ? 'block' : 'none';
+  el('copyAllRow').style.display = isTwoPass ? 'flex' : 'none';
+
+  if (isTwoPass) {
+    el('pass1Box').classList.remove('hidden');
+    el('pass1Cmd').textContent = pass1Cmd;
+  } else {
+    el('pass1Box').classList.add('hidden');
+  }
+
+  if (chapterProbeCmd) {
+    el('chapterProbeBox').classList.remove('hidden');
+    el('chapterProbeCmd').textContent = chapterProbeCmd;
+  } else {
+    el('chapterProbeBox').classList.add('hidden');
+  }
+}
+
+// ─── Copy ──────────────────────────────────────────
+function copyText(text, btn) {
+  const original = btn.textContent;
+  const done = () => {
+    btn.classList.add('copied');
+    btn.textContent = 'Copied!';
+    showToast();
+    setTimeout(() => {
+      btn.classList.remove('copied');
+      btn.textContent = original;
+    }, 2000);
+  };
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(done).catch(() => fallbackCopy(text, done));
+  } else {
+    fallbackCopy(text, done);
+  }
+}
+
+function fallbackCopy(text, done) {
+  const ta = document.createElement('textarea');
+  ta.value = text;
+  ta.style.position = 'fixed';
+  ta.style.opacity = '0';
+  document.body.appendChild(ta);
+  ta.focus();
+  ta.select();
+  let ok = false;
+  try { ok = document.execCommand('copy'); } catch (e) {}
+  document.body.removeChild(ta);
+  if (ok) done();
+  else showToast();
+}
+
+function showToast() {
+  const t = el('toast');
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 1800);
+}
+
+// ─── Analyze ────────────────────────────────────────
+function buildAnalyzeProbe() {
+  const input = el('inputPath').value.trim().replace(/^"|"$/g, '') || 'input.mp4';
+  return 'ffprobe -v error -of json -show_streams -show_entries stream=index,codec_name,codec_type,width,height,r_frame_rate,pix_fmt,sample_rate,channels,channel_layout,bit_rate,duration:stream_tags=language,title ' + quote(input);
+}
+
+function parseProbeOutput(raw) {
+  raw = raw.trim();
+  if (!raw) return [];
+  // strip BOM if present
+  if (raw.charCodeAt(0) === 0xFEFF) raw = raw.slice(1);
+  // find first '{' and trim leading garbage
+  const braceIdx = raw.indexOf('{');
+  if (braceIdx > 0) raw = raw.slice(braceIdx);
+  if (raw.startsWith('{')) {
+    try {
+      const data = JSON.parse(raw);
+      if (data.streams && data.streams.length > 0) {
+        return data.streams.map(s => ({
+          index: s.index,
+          type: s.codec_type,
+          codec: s.codec_name || 'unknown',
+          details: formatStreamDetails(s),
+        }));
+      }
+      // streams array exists but is empty, or key missing
+      if (data.streams && data.streams.length === 0) return [];
+    } catch (e) {
+      // maybe the JSON spans multiple objects (ffprobe sometimes outputs separate JSON per stream)
+      return parseMultipleJsonObjects(raw);
+    }
+  }
+  // fallback: parse plain text "Stream #0:0(eng): Video: mpeg2video..."
+  return parseStreamText(raw);
+}
+
+function parseMultipleJsonObjects(raw) {
+  // ffprobe with certain options outputs multiple { } objects on separate lines
+  const streams = [];
+  const lines = raw.split(/\n/);
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (trimmed.startsWith('{')) {
+      try {
+        const obj = JSON.parse(trimmed);
+        if (obj.codec_type) {
+          streams.push({
+            index: obj.index,
+            type: obj.codec_type,
+            codec: obj.codec_name || 'unknown',
+            details: formatStreamDetails(obj),
+          });
+        }
+      } catch (e) { /* skip */ }
+    }
+  }
+  return streams.length > 0 ? streams : parseStreamText(raw);
+}
+
+function parseStreamText(raw) {
+  const streams = [];
+  const re = /Stream #(\d+):(\d+)(?:\[[\d\w]+\])?(?:\((\w+)\))?:\s*(\w+):\s*(\S+)/gi;
+  let m;
+  while ((m = re.exec(raw)) !== null) {
+    const type = m[4].toLowerCase();
+    const mappedType = type === 'subtitle' ? 'subtitle' : type === 'audio' ? 'audio' : 'video';
+    streams.push({
+      index: parseInt(m[2]),
+      type: mappedType,
+      codec: m[5],
+      details: m[3] ? 'language: ' + m[3] : '',
+    });
+  }
+  return streams;
+}
+
+function formatStreamDetails(s) {
+  const parts = [];
+  if (s.codec_type === 'video') {
+    if (s.width && s.height) parts.push(s.width + '\u00d7' + s.height);
+    if (s.r_frame_rate) parts.push(parseFrameRate(s.r_frame_rate) + ' fps');
+    if (s.pix_fmt) parts.push(s.pix_fmt);
+  } else if (s.codec_type === 'audio') {
+    if (s.sample_rate) parts.push((parseInt(s.sample_rate)/1000).toFixed(1) + ' kHz');
+    if (s.channels) parts.push(s.channels + 'ch');
+    if (s.channel_layout) parts.push(s.channel_layout);
+  }
+  if (s.tags && s.tags.language) parts.push('lang: ' + s.tags.language);
+  if (s.tags && s.tags.title) parts.push(s.tags.title);
+  if (s.bit_rate) parts.push(formatBitrate(s.bit_rate));
+  if (s.duration) parts.push(formatDuration(s.duration));
+  return parts.join('  \u00b7  ');
+}
+
+function parseFrameRate(rate) {
+  if (!rate) return '';
+  const parts = rate.split('/');
+  if (parts.length === 2 && parts[1] !== '0') return (parseInt(parts[0])/parseInt(parts[1])).toFixed(2);
+  return rate;
+}
+
+function formatBitrate(bps) {
+  const n = parseInt(bps);
+  if (n >= 1000000) return (n/1000000).toFixed(1) + ' Mbps';
+  if (n >= 1000) return (n/1000).toFixed(0) + ' kbps';
+  return n + ' bps';
+}
+
+function formatDuration(sec) {
+  const s = parseFloat(sec);
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const ss = Math.floor(s % 60);
+  return h + ':' + String(m).padStart(2,'0') + ':' + String(ss).padStart(2,'0');
+}
+
+// ─── Stream selection (fed by Analyze Streams) ──────
+// 0:a:N / 0:s:N count tracks of that type in order, so the relative position
+// among the parsed audio/subtitle streams is what the map value needs.
+function updateStreamSelectors() {
+  const aSel = el('audioStream');
+  const prevA = aSel.value;
+  aSel.innerHTML = '<option value="">auto (first)</option>';
+  let ai = 0;
+  analyzedStreams.forEach(s => {
+    if (s.type !== 'audio') return;
+    const val = '0:a:' + ai++;
+    const label = val + ' \u2014 ' + s.codec + (s.details ? ' \u00b7 ' + s.details : '');
+    aSel.add(new Option(label, val));
+  });
+  if (prevA && [...aSel.options].some(o => o.value === prevA)) aSel.value = prevA;
+
+  const sSel = el('subStreamSel');
+  const prevS = sSel.value;
+  sSel.innerHTML = '<option value="0:s:0">0:s:0 (first)</option><option value="custom">custom...</option>';
+  let si = 0;
+  analyzedStreams.forEach(s => {
+    if (s.type !== 'subtitle') return;
+    const val = '0:s:' + si++;
+    const label = val + ' \u2014 ' + s.codec + (s.details ? ' \u00b7 ' + s.details : '');
+    sSel.add(new Option(label, val), sSel.options.length - 1); // keep "custom..." last
+  });
+  if (prevS && [...sSel.options].some(o => o.value === prevS)) sSel.value = prevS;
+  else sSel.value = '0:s:0';
+  el('subStream').classList.toggle('hidden', sSel.value !== 'custom');
+}
+
+function updateAnalyzeUI() {
+  const probeCmd = buildAnalyzeProbe();
+  el('analyzeProbeCmd').textContent = probeCmd;
+
+  const raw = el('analyzeOutput').value.trim();
+  const result = el('analyzeResult');
+  const body = el('streamTableBody');
+
+  if (raw) {
+    const streams = parseProbeOutput(raw);
+    analyzedStreams = streams;
+    updateStreamSelectors();
+    if (streams.length > 0) {
+      result.classList.remove('hidden');
+      body.innerHTML = streams.map(s => {
+        const typeClass = esc(s.type);
+        return '<tr>' +
+          '<td>' + esc(s.index) + '</td>' +
+          '<td><span class="stream-type ' + typeClass + '">' + esc(s.type) + '</span></td>' +
+          '<td>' + esc(s.codec) + '</td>' +
+          '<td style="color:var(--text-dim)">' + esc(s.details || '\u2014') + '</td>' +
+          '</tr>';
+      }).join('');
+    } else {
+      result.classList.remove('hidden');
+      body.innerHTML = '<tr><td colspan="4" style="color:var(--text-muted);text-align:center;padding:12px">No streams found &mdash; check the file path and try again. Run the command in a terminal to verify output.</td></tr>';
+    }
+  } else {
+    result.classList.add('hidden');
+  }
+}
+
+function toggleAnalyze() {
+  const panel = el('analyzePanel');
+  const btn = el('btnAnalyze');
+  const show = panel.classList.contains('hidden');
+  panel.classList.toggle('hidden', !show);
+  btn.classList.toggle('active', show);
+  if (show) {
+    updateAnalyzeUI();
+  }
+}
+
+// ─── File path helper ──────────────────────────────
+function getFilePath(file) {
+  // try non-standard full-path properties (Chromium file:// origin or Electron)
+  if (file.path && file.path.length > 3) return file.path;
+  // DataTransferItem.webkitGetAsEntry sometimes gives a relative path
+  return file.name;
+}
+
+function setInputPath(path) {
+  const field = el('inputPath');
+  field.value = path;
+  // flash hint if only a filename (no drive letter, no slash/backslash)
+  const hasPathSep = /[\\/]/.test(path) || /^[A-Z]:/i.test(path);
+  if (!hasPathSep && path) {
+    field.style.borderColor = '#e8a040';
+    field.style.boxShadow = '0 0 0 2px rgba(232,160,64,0.18)';
+    field.title = 'Add the full directory path before the filename';
+    setTimeout(() => {
+      field.focus();
+      field.select();
+    }, 50);
+  } else {
+    field.style.borderColor = '';
+    field.style.boxShadow = '';
+    field.title = '';
+  }
+}
+
+// ─── Event bindings ────────────────────────────────
+function bindAll() {
+  // Drop zone
+  const dz = el('dropZone');
+  const fi = el('fileInput');
+  dz.addEventListener('click', () => fi.click());
+  dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('dragover'); });
+  dz.addEventListener('dragleave', () => dz.classList.remove('dragover'));
+  dz.addEventListener('drop', e => {
+    e.preventDefault();
+    dz.classList.remove('dragover');
+    const file = e.dataTransfer.files[0];
+    if (file) { setInputPath(getFilePath(file)); updateUI(); }
+  });
+  fi.addEventListener('change', () => {
+    if (fi.files[0]) { setInputPath(getFilePath(fi.files[0])); updateUI(); }
+  });
+
+  // Container selector: swap output extension, toggle MP4-only defaults
+  el('container').addEventListener('change', () => {
+    applyContainerSync();
+    el('faststart').checked = containerValue() === 'mp4';
+    updateUI();
+  });
+
+  // All inputs trigger UI update
+  const inputs = document.querySelectorAll('input, select, textarea');
+  inputs.forEach(inp => {
+    if (inp.id === 'analyzeOutput') return; // has its own live handler below
+    const evt = (inp.type === 'range' || inp.type === 'text' || inp.type === 'number' || inp.tagName === 'TEXTAREA') ? 'input' : 'change';
+    inp.addEventListener(evt, () => {
+      // Sync range displays
+      if (inp.id === 'crf') {
+        el('crfLabel').textContent = inp.value;
+        el('crfDisplay').textContent = inp.value;
+      }
+      if (inp.id === 'hwQP') {
+        el('hwQPLabel').textContent = inp.value;
+        el('hwQPDisplay').textContent = inp.value;
+      }
+      // Toggle FPS custom
+      if (inp.id === 'fps') {
+        el('customFpsGroup').classList.toggle('hidden', inp.value !== 'custom');
+      }
+      // Clear path warning when user edits
+      if (inp.id === 'inputPath') {
+        inp.style.borderColor = '';
+        inp.style.boxShadow = '';
+        inp.title = '';
+      }
+      updateUI();
+    });
+  });
+
+  // Copy buttons
+  document.querySelectorAll('.btn-copy').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const targetId = btn.dataset.target;
+      const text = el(targetId).textContent;
+      copyText(text, btn);
+    });
+  });
+
+  // Copy all
+  el('btnCopyAll').addEventListener('click', function() {
+    const p1 = el('pass1Cmd').textContent;
+    const p2 = el('pass2Cmd').textContent;
+    const full = p1 + '\n\n' + p2;
+    copyText(full, this);
+  });
+
+  // Analyze
+  el('btnAnalyze').addEventListener('click', toggleAnalyze);
+  el('analyzeOutput').addEventListener('input', updateAnalyzeUI);
+}
+
+// ─── Init ──────────────────────────────────────────
+buildRateModeRadio();
+el('encoder').value = 'libx264';
+bindAll();
+updateUI(); // first run also builds the preset/CRF defaults for libx264
+</script>
+</body>
+</html>
