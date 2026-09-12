@@ -4,7 +4,6 @@ FFBlueprint is a smart, zero-dependency command line builder for FFmpeg.
 It comes as a single, portable HTML file that works 100% offline in any browser. 
 Unlike generic builders, it features deep hardware encoder support 
 (NVIDIA NVENC, Intel QSV, AMD AMF) using their true native flags, smart container rules, and precise two-pass workflows.
----
 
 ## Special features
 
