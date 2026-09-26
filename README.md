@@ -2,6 +2,8 @@
 
 FFBlueprint is a smart, zero-dependency command line builder for FFmpeg. It comes as a single, portable HTML file that works 100% offline in any browser. Please note: FFBlueprint only generates the text commands. You still need FFmpeg (and FFprobe) installed on your system to actually process your videos. It features deep hardware encoder support (NVIDIA NVENC, Intel QSV, AMD AMF, and Apple VideoToolbox) using their true native flags, smart container rules, and precise two-pass workflows. VideoToolbox requires macOS; its Apple Silicon quality mode requires FFmpeg 4.4 or newer, while Windows builds cannot provide it.
 
+👉 **[Try FFBlueprint Live in your Browser](https://escaton80.github.io/FFBlueprint/FFBlueprint.html)**
+
 ## Special features
 
 What sets this builder apart from other FFmpeg command generators:
@@ -89,6 +91,8 @@ to guess track numbers:
 Use this to find e.g. which subtitle stream index to select, or whether your source
 is 8- or 10-bit.
 
+![Analyze Results](Analyze.png)
+
 ---
 
 ## 3. Video
@@ -157,6 +161,8 @@ use the Quality Boost checkbox or the PC-GPU preset/rate-control flags.
   which behaves like CRF (the bitrate floats to hit the chosen quality).
   Pair it with pixel format `p010le` (10-bit) for the full effect.
   Needs a recent GPU and driver — see Troubleshooting if a flag is rejected.
+
+![HW Encoding example with AMD AMF](AMD_AMF.png)
 
 ### Common video options (hidden for `copy`)
 
