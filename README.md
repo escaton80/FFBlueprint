@@ -1,25 +1,23 @@
 # FFBlueprint — User Manual #
 
-FFBlueprint is a smart, zero-dependency command line builder for FFmpeg. It comes as a single, portable HTML file that works 100% offline in any browser. Please note: FFBlueprint only generates the text commands. You still need FFmpeg (and FFprobe) installed on your system to actually process your videos. It features deep hardware encoder support (NVIDIA NVENC, Intel QSV, AMD AMF) using their true native flags, smart container rules, and precise two-pass workflows.
-
-
-👉 **[Try FFBlueprint Live in your Browser](https://escaton80.github.io/FFBlueprint/FFBlueprint.html)**
+FFBlueprint is a smart, zero-dependency command line builder for FFmpeg. It comes as a single, portable HTML file that works 100% offline in any browser. Please note: FFBlueprint only generates the text commands. You still need FFmpeg (and FFprobe) installed on your system to actually process your videos. It features deep hardware encoder support (NVIDIA NVENC, Intel QSV, AMD AMF, and Apple VideoToolbox) using their true native flags, smart container rules, and precise two-pass workflows. VideoToolbox requires macOS; its Apple Silicon quality mode requires FFmpeg 4.4 or newer, while Windows builds cannot provide it.
 
 ## Special features
 
 What sets this builder apart from other FFmpeg command generators:
 
-* **All three GPU encoder families, with their *real* flags.** AMD AMF, Intel QSV,
-  and NVIDIA NVENC are covered — including the AV1 variant of each. The rate-control
-  flags emitted are the ones each family actually accepts (`-rc constqp -qp` for NVENC,
-  `-qp_i/-qp_p/-qp_b` for AMF, `-global_quality` for QSV), not generic flags that get
-  silently ignored or rejected. QSV's implicit-CBR quirk (maxrate = bitrate, bufsize
-  auto-doubled) is handled for you.
+* **Four hardware families, with their *real* flags.** AMD AMF, Intel QSV,
+  NVIDIA NVENC (including their AV1 variants), and Apple VideoToolbox are covered.
+  The PC GPU families use their native rate-control flags (`-rc constqp -qp` for
+  NVENC, `-qp_i/-qp_p/-qp_b` for AMF, `-global_quality` for QSV); Apple uses
+  VideoToolbox's native `-q:v` quality mode or `-b:v` bitrate mode instead of being
+  forced into a PC-GPU control model. QSV's implicit-CBR quirk is handled for you.
 * **Quality boost checkbox.** One click adds the flags that close most of the
-  quality gap between GPU and CPU encoders: adaptive quantization (AQ), lookahead,
+  quality gap between PC GPU and CPU encoders: adaptive quantization (AQ), lookahead,
   multipass, B-frames-as-references — gated per encoder, since the AV1 variants
   don't take every flag. On NVIDIA it also switches CQP to quality-mode VBR
-  (`-cq`), which behaves like CRF. See [Hardware encoder options](#3-video).
+  (`-cq`), which behaves like CRF. Apple VideoToolbox uses its own native quality
+  controls instead. See [Hardware encoder options](#3-video).
 * **Container selector with compatibility rules.** MKV is the default; switching to
   MP4 renames the output extension, locks subtitles to `mov_text`, switches on
   *Fast start*, and warns about Opus/FLAC audio. Invalid container/codec combos
@@ -33,7 +31,7 @@ What sets this builder apart from other FFmpeg command generators:
   the output and every stream is listed in a table (codec, resolution, fps, pixel
   format, language, bitrate, duration). Parses JSON, multi-object JSON, and plain
   terminal text — and the results feed straight into the **Audio Stream** and
-  **Stream Selector** dropdowns, so multi-track files (several languages, several
+  **Subtitle Stream** dropdowns, so multi-track files (several languages, several
   subtitles) can be picked by their actual content instead of guessed indices.
 * **Correct two-pass workflow.** Pass 1 drops the subtitle filter and audio, writes
   to the null device, and warns about the classic `ffmpeg2pass-0.log` pitfall.
@@ -46,7 +44,8 @@ What sets this builder apart from other FFmpeg command generators:
   (auto-calculated, kept even) — preventing the `width not divisible by 2` failure.
 * **Single file, fully offline, zero dependencies.** One `FFBlueprint.html` — no Node
   build, no internet connection, nothing phoning home. Windows-aware (`NUL` device,
-  backslash paths, automatic quoting). Just open it, build, copy, run.
+  backslash paths, automatic quoting). On macOS, use a VideoToolbox-enabled FFmpeg
+  build for the Apple encoders. Just open it, build, copy, run.
 
 ---
 
@@ -90,8 +89,6 @@ to guess track numbers:
 Use this to find e.g. which subtitle stream index to select, or whether your source
 is 8- or 10-bit.
 
-![Analyze Results](Analyze.png)
-
 ---
 
 ## 3. Video
@@ -106,17 +103,25 @@ is 8- or 10-bit.
 * **AMD AMF** — `h264_amf`, `hevc_amf`, `av1_amf`
 * **Intel QSV** — `h264_qsv`, `hevc_qsv`, `av1_qsv`
 * **NVIDIA NVENC** — `h264_nvenc`, `hevc_nvenc`, `av1_nvenc`
+* **Apple VideoToolbox** — `h264_videotoolbox`, `hevc_videotoolbox` (macOS only;
+  requires an FFmpeg build compiled with VideoToolbox). On Apple Silicon, use its
+  native **Quality** mode (`-q:v`, higher is better; FFmpeg 4.4+) or **Bitrate**
+  mode (`-b:v`) as the compatibility fallback. VideoToolbox has no Quality Boost
+  checkbox because its controls are different from NVENC/QSV/AMF.
 
-The options below the encoder change to match what that encoder actually supports —
-the flag names shown in the generated command are the real per-encoder flags.
+### Rate Mode (software encoders and VideoToolbox)
 
-### Rate Mode (software encoders only)
+Software encoders offer the following modes:
 
 | Mode | Behavior |
 |---|---|
 | **CRF** | Quality-targeted, one pass. You pick a quality level; the bitrate floats. Recommended default. |
 | **1-Pass** | Fixed average bitrate (`-b:v`), fast, predictable size, lower quality per bit. |
 | **2-Pass** | Bitrate-targeted, two runs. Best size/quality accuracy at a chosen bitrate. Slower — see [Two-pass workflow](#7-the-two-pass-workflow). |
+
+VideoToolbox shows its own two-mode selector: **Quality** (`-q:v`, Apple Silicon;
+higher values are better) or **Bitrate** (`-b:v`). VideoToolbox does not support the
+software two-pass workflow.
 
 * **CRF values** — lower = better quality and bigger files. Ranges/defaults differ per
   codec (x264 0–51 default 23, x265 default 28, VP9/AV1 0–63, SVT-AV1 default 35).
@@ -129,14 +134,21 @@ the flag names shown in the generated command are the real per-encoder flags.
 
 ### Hardware encoder options
 
+AMF, QSV, and NVENC expose the PC-GPU controls below. Apple VideoToolbox is
+separate: choose **Quality** (`-q:v`) on Apple Silicon, where higher values mean
+better quality, or **Bitrate** (`-b:v`) as the compatibility fallback. It does not
+use the Quality Boost checkbox or the PC-GPU preset/rate-control flags.
+
 * **Rate Control** — `CQP` (constant quality, like CRF), `CBR` (constant bitrate,
   for streaming/recording), `VBR` (average bitrate with optional peak cap).
-* **QP / Quality slider** — used in CQP mode. Lower = better. 20–26 is a sensible
-  range for recording; 23 is the default.
+* **QP / Quality slider** — used in CQP mode on AMF/QSV/NVENC. Lower QP is better;
+  20–26 is a sensible range for recording. For VideoToolbox Quality mode, the
+  slider is `-q:v` and higher values are better; it requires Apple Silicon and
+  FFmpeg 4.4 or newer.
 * **Quality / Preset** — speed-vs-quality trade-off (`speed`…`quality` on AMF,
-  `p1`…`p7` on NVENC). Middle is fine; higher costs GPU time for modest gains.
-* **Bitrate / Max Rate / Buf Size** — used in CBR/VBR mode. Leave Max/Buf empty for a
-  simple average-bitrate encode.
+  `p1`…`p7` on NVENC). VideoToolbox has no preset control.
+* **Bitrate / Max Rate / Buf Size** — bitrate is used by all hardware families;
+  Max Rate and Buf Size apply to AMF/QSV/NVENC CBR/VBR modes, not VideoToolbox.
 
 * **Quality boost** — one checkbox that adds the flags which most improve
   quality per bit for the selected encoder family: adaptive quantization
@@ -145,8 +157,6 @@ the flag names shown in the generated command are the real per-encoder flags.
   which behaves like CRF (the bitrate floats to hit the chosen quality).
   Pair it with pixel format `p010le` (10-bit) for the full effect.
   Needs a recent GPU and driver — see Troubleshooting if a flag is rejected.
-
-  ![HW Encoding example with AMD AMF](AMD_AMF.png)
 
 ### Common video options (hidden for `copy`)
 
@@ -257,6 +267,9 @@ Use **Copy Both Passes** to grab them together. You can delete `ffmpeg2pass-0.lo
   Opus needs), audio bitrate 160k.
 * **Compatible web MP4:** container MP4, encoder `libx264`, CRF 21, preset `medium`
   (Fast start switches on automatically), audio `aac` 192k, subtitles `mov_text`.
+* **Apple Silicon HEVC:** container MKV or MP4, encoder `hevc_videotoolbox`,
+  VideoToolbox **Quality** mode (`-q:v`, higher is better), audio `aac` or `copy`.
+  Requires macOS, Apple Silicon, and FFmpeg 4.4+ with VideoToolbox support.
 * **Trim without re-encoding:** Custom Arguments `-ss 00:05:00 -to 00:15:00`,
   encoder `copy`, audio `copy`.
 * **Fix a file that won't play on a TV:** encoder `copy` (or x264 re-encode if the
@@ -270,7 +283,7 @@ Use **Copy Both Passes** to grab them together. You can delete `ffmpeg2pass-0.lo
 |---|---|
 | `unable to open file ffmpeg2pass-0.log` | Pass 2 run before Pass 1, or in a different folder. Run Pass 1 first, same working directory. |
 | `VBV maxrate specified, but no bufsize, ignored` | You set Max Rate but left Buf Size empty — the cap is silently dropped. Fill **Buf Size** (≈ 2× max rate is typical). |
-| `Encoder not found` / `Unknown encoder 'h264_amf'` | Your FFmpeg build lacks that hardware encoder. Try a gyan.dev or BtbN "full" Windows build, and make sure the GPU drivers are current. |
+| `Encoder not found` / `Unknown encoder 'h264_amf'` | Your FFmpeg build lacks that hardware encoder. Try a gyan.dev or BtbN "full" Windows build, and make sure the GPU drivers are current. For `*_videotoolbox`, use macOS with an FFmpeg build compiled with VideoToolbox; it is not available in Windows builds. |
 | Output plays but looks blocky at high motion | CRF too high (raise quality = lower the number) or bitrate too low; check the Max Rate cap isn't biting. |
 | Subtitle copy fails into MP4 | MP4 can't hold plain SRT — the Container selector switches subtitles to *mov_text* automatically; keep it on **Encode to codec**. |
 | `Temporal AQ not supported`, `B frames as references are not supported`, or similar after enabling **Quality boost** | The GPU/driver is too old for one of the boost flags (temporal AQ & B-ref need NVIDIA Turing+, multipass needs driver 530+, AMF preanalysis needs recent AMD drivers). Uncheck **Quality boost**. |
