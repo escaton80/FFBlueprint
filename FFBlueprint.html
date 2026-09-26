@@ -290,12 +290,16 @@ section{margin-bottom:12px}
             <option value="hevc_nvenc">HEVC (hevc_nvenc)</option>
             <option value="av1_nvenc">AV1 (av1_nvenc)</option>
           </optgroup>
+          <optgroup label="Apple VideoToolbox (macOS)">
+            <option value="h264_videotoolbox">H.264 (h264_videotoolbox)</option>
+            <option value="hevc_videotoolbox">HEVC (hevc_videotoolbox)</option>
+          </optgroup>
         </select>
       </div>
       <div class="field-group" id="rateModeGroup">
         <label>Rate Mode</label>
         <div class="radio-group" id="rateModeRadio"></div>
-        <div class="help-tip">CRF = constant quality (recommended) &middot; 1-Pass = fixed bitrate &middot; 2-Pass = best size accuracy</div>
+        <div class="help-tip" id="rateModeHelp">CRF = constant quality (recommended) &middot; 1-Pass = fixed bitrate &middot; 2-Pass = best size accuracy</div>
       </div>
     </div>
 
@@ -339,16 +343,17 @@ section{margin-bottom:12px}
     <!-- Hardware quality controls -->
     <div id="hwControls" class="hidden">
       <div class="field-row" style="margin-top:8px">
-        <div class="field-group">
+        <div class="field-group" id="hwRateControlGroup">
           <label>Rate Control</label>
           <select id="hwRateControl"></select>
         </div>
         <div class="field-group" id="hwQPGroup">
-          <label>QP (<span id="hwQPLabel">23</span>)</label>
+          <label><span id="hwQualityLabel">QP</span> (<span id="hwQPLabel">23</span>)</label>
           <div class="range-row">
             <input type="range" id="hwQP" min="0" max="51" value="23">
           </div>
           <div class="range-value" style="text-align:center" id="hwQPDisplay">23</div>
+          <div class="help-tip" id="hwQualityHint"></div>
         </div>
         <div class="field-group" id="hwPresetGroup">
           <label id="hwPresetLabel">Preset</label>
@@ -359,11 +364,11 @@ section{margin-bottom:12px}
             <label>Video Bitrate</label>
             <input type="text" id="hwBitrate" value="5M" placeholder="e.g. 5M" spellcheck="false">
           </div>
-          <div class="field-group">
+          <div class="field-group" id="hwMaxrateGroup">
             <label>Max Rate</label>
             <input type="text" id="hwMaxrate" placeholder="e.g. 8M" spellcheck="false">
           </div>
-          <div class="field-group">
+          <div class="field-group" id="hwBufsizeGroup">
             <label>Buf Size</label>
             <input type="text" id="hwBufsize" placeholder="e.g. 16M" spellcheck="false">
           </div>
@@ -591,7 +596,8 @@ const esc = (s) => String(s).replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;',
 const HW_ENCODERS = new Set([
   'h264_amf','hevc_amf','av1_amf',
   'h264_qsv','hevc_qsv','av1_qsv',
-  'h264_nvenc','hevc_nvenc','av1_nvenc'
+  'h264_nvenc','hevc_nvenc','av1_nvenc',
+  'h264_videotoolbox','hevc_videotoolbox'
 ]);
 const SW_ENCODERS = new Set([
   'libx264','libx265','libvpx-vp9','libaom-av1','libsvtav1','prores_ks'
@@ -642,12 +648,19 @@ const HW_CONFIGS = {
     rcMap: { cqp:'constqp', cbr:'cbr', vbr:'vbr' },
     qpFlag: '-qp',
   },
+  // On Apple Silicon, -q:v is VideoToolbox's native constant-quality control
+  // (higher is better). Bitrate mode is the portable fallback.
+  videotoolbox: {
+    rcModes: [['quality','Quality (Apple Silicon)'],['bitrate','Bitrate']],
+    qualityRange: [1,100,65],
+  },
 };
 
 const HW_BOOST_HINTS = {
   nvenc: 'adds spatial+temporal AQ, lookahead 32, multipass qres, B-frames-as-refs; CQP becomes quality-VBR (-cq, like CRF). Needs Turing+ GPU and driver 530+. Pair with pixel format p010le.',
   qsv: 'adds lookahead (extbrc 40), adaptive I/B placement, MB-level BRC and RDO. Pair with pixel format p010le.',
   amf: 'adds preanalysis, VBAQ adaptive quantization and high-motion boost. Pair with pixel format p010le.',
+  videotoolbox: 'Apple VideoToolbox uses -q:v quality mode on Apple Silicon (higher is better) or bitrate mode. Requires macOS and an FFmpeg build with VideoToolbox.',
 };
 
 // ─── Container compat ──────────────────────────────
@@ -671,6 +684,7 @@ function getHwFamily(enc) {
   if (enc.endsWith('_amf')) return 'amf';
   if (enc.endsWith('_qsv')) return 'qsv';
   if (enc.endsWith('_nvenc')) return 'nvenc';
+  if (enc.endsWith('_videotoolbox')) return 'videotoolbox';
   return null;
 }
 
@@ -684,20 +698,18 @@ let lastEncoder = null; // encoder whose preset/CRF defaults are currently built
 let analyzedStreams = []; // streams from the last successful Analyze Streams parse
 
 // ─── Build UI ──────────────────────────────────────
-function buildRateModeRadio() {
+function buildRateModeRadio(kind = 'software') {
   const g = el('rateModeRadio');
   g.innerHTML = '';
-  const modes = [
-    ['crf','CRF'],
-    ['abr1','1-Pass'],
-    ['abr2','2-Pass'],
-  ];
+  const modes = kind === 'videotoolbox'
+    ? [['quality','Quality'],['bitrate','Bitrate']]
+    : [['crf','CRF'],['abr1','1-Pass'],['abr2','2-Pass']];
   modes.forEach(([val,label]) => {
     g.insertAdjacentHTML('beforeend',
       `<input type="radio" name="rateMode" value="${val}" id="rm_${val}"><label for="rm_${val}">${label}</label>`
     );
   });
-  document.querySelector('input[name="rateMode"][value="crf"]').checked = true;
+  g.querySelector('input[type="radio"]').checked = true;
 }
 
 function buildSwPresetOptions() {
@@ -764,13 +776,42 @@ function buildHwOptions() {
   cfg.rcModes.forEach(([v,l]) => { rcSel.add(new Option(l, v)); });
   rcSel.value = cfg.rcModes.some(([v]) => v === prevRC) ? prevRC : cfg.rcModes[0][0];
 
-  el('hwPresetLabel').textContent = cfg.presetLabel;
-  const presetSel = el('hwPreset');
-  const prevPreset = presetSel.value;
-  presetSel.innerHTML = '';
-  cfg.presets.forEach(([v,l]) => { presetSel.add(new Option(l, v)); });
-  const defaultIdx = Math.floor(cfg.presets.length / 2);
-  presetSel.value = cfg.presets.some(([v]) => v === prevPreset) ? prevPreset : cfg.presets[defaultIdx][0];
+  const isVT = fam === 'videotoolbox';
+  el('hwRateControlGroup').classList.toggle('hidden', isVT);
+  el('hwPresetGroup').classList.toggle('hidden', isVT);
+  el('hwBitrateGroup').classList.toggle('hidden', isVT);
+  el('hwBoost').parentElement.parentElement.classList.toggle('hidden', isVT);
+  el('hwQualityHint').textContent = isVT ? 'Apple Silicon: higher quality values produce better quality. FFmpeg 4.4+.' : '';
+
+  if (isVT) {
+    el('hwQPGroup').classList.remove('hidden');
+    el('hwQualityLabel').textContent = 'Quality';
+    const [min, max, value] = cfg.qualityRange;
+    const slider = el('hwQP');
+    slider.min = min;
+    slider.max = max;
+    slider.step = 1;
+    slider.value = slider.value >= min && slider.value <= max ? slider.value : value;
+    el('hwQPLabel').textContent = slider.value;
+    el('hwQPDisplay').textContent = slider.value;
+  } else {
+    el('hwQualityLabel').textContent = 'QP';
+    const slider = el('hwQP');
+    slider.min = 0;
+    slider.max = 51;
+    slider.step = 1;
+    slider.value = 23;
+    el('hwQPLabel').textContent = slider.value;
+    el('hwQPDisplay').textContent = slider.value;
+    el('hwPresetGroup').classList.remove('hidden');
+    const presetSel = el('hwPreset');
+    const prevPreset = presetSel.value;
+    presetSel.innerHTML = '';
+    cfg.presets.forEach(([v,l]) => { presetSel.add(new Option(l, v)); });
+    const defaultIdx = Math.floor(cfg.presets.length / 2);
+    presetSel.value = cfg.presets.some(([v]) => v === prevPreset) ? prevPreset : cfg.presets[defaultIdx][0];
+    el('hwPresetLabel').textContent = cfg.presetLabel;
+  }
 
   el('hwBoostHint').textContent = HW_BOOST_HINTS[fam] || '';
 }
@@ -793,11 +834,13 @@ function updateUI() {
   const sw = isSW(enc);
   const copy = enc === 'copy';
 
-  // Rate mode radio visibility
-  el('rateModeGroup').classList.toggle('hidden', hw || copy || enc === 'prores_ks');
+  // Rate mode radio visibility: software modes plus VideoToolbox's native
+  // Quality/Bitrate selector; other hardware families use their own controls.
+  el('rateModeGroup').classList.toggle('hidden', (!sw && getHwFamily(enc) !== 'videotoolbox') || copy || enc === 'prores_ks');
 
-  // SW / HW / Copy sections
-  el('swControls').classList.toggle('hidden', !sw);
+  el('rateModeHelp').textContent = getHwFamily(enc) === 'videotoolbox'
+    ? 'Apple Silicon quality mode uses -q:v (higher is better); Bitrate mode uses -b:v.'
+    : 'CRF = constant quality (recommended) \u00b7 1-Pass = fixed bitrate \u00b7 2-Pass = best size accuracy';
   el('hwControls').classList.toggle('hidden', !hw);
   el('videoCommon').classList.toggle('hidden', copy);
 
@@ -806,6 +849,10 @@ function updateUI() {
   if (enc !== lastEncoder) {
     if (sw) buildSwPresetOptions(); // also resets CRF to the codec default
     if (hw) buildHwOptions();
+    const family = getHwFamily(enc);
+    const previousFamily = lastEncoder ? getHwFamily(lastEncoder) : null;
+    if (family === 'videotoolbox' && previousFamily !== 'videotoolbox') buildRateModeRadio('videotoolbox');
+    else if (family !== 'videotoolbox' && previousFamily === 'videotoolbox') buildRateModeRadio('software');
     lastEncoder = enc;
   }
 
@@ -823,10 +870,18 @@ function updateUI() {
   }
 
   if (hw) {
+    const fam = getHwFamily(enc);
+    const isVT = fam === 'videotoolbox';
     const rc = el('hwRateControl').value;
     const isCQP = rc === 'cqp';
-    el('hwQPGroup').classList.toggle('hidden', !isCQP);
-    el('hwBitrateGroup').classList.toggle('hidden', isCQP);
+    const vtMode = document.querySelector('input[name="rateMode"]:checked')?.value || 'quality';
+    el('hwQPGroup').classList.toggle('hidden', !isCQP && !(isVT && vtMode === 'quality'));
+    el('hwBitrateGroup').classList.toggle('hidden', isVT ? vtMode !== 'bitrate' : isCQP);
+    el('hwMaxrateGroup').classList.toggle('hidden', isVT);
+    el('hwBufsizeGroup').classList.toggle('hidden', isVT);
+    el('hwRateControlGroup').classList.toggle('hidden', isVT);
+    el('hwPresetGroup').classList.toggle('hidden', isVT);
+    el('hwBoost').parentElement.parentElement.classList.toggle('hidden', isVT);
   }
 
   // Audio
@@ -975,37 +1030,46 @@ function buildCommand() {
     const cfg = HW_CONFIGS[fam];
     const rc = el('hwRateControl').value;
     const boost = el('hwBoost').checked;
-    // With boost, NVENC CQP switches to quality-mode VBR: -cq behaves like
-    // CRF (bitrate floats) and looks better than constant QP
-    if (cfg.rcMap) {
-      const rcVal = (boost && fam === 'nvenc' && rc === 'cqp') ? 'vbr' : cfg.rcMap[rc];
-      videoArgs.push('-rc ' + rcVal);
-    }
-    if (rc === 'cqp') {
-      if (fam === 'amf') {
-        const qp = el('hwQP').value;
-        videoArgs.push('-qp_i ' + qp, '-qp_p ' + qp);
-        if (enc === 'h264_amf' || enc === 'av1_amf') videoArgs.push('-qp_b ' + qp);
-      } else if (fam === 'nvenc' && boost) {
-        videoArgs.push('-cq ' + el('hwQP').value, '-b:v 0');
+    if (fam === 'videotoolbox') {
+      const vtMode = rm === 'bitrate' ? 'bitrate' : 'quality';
+      if (vtMode === 'quality') {
+        videoArgs.push('-q:v ' + el('hwQP').value);
       } else {
-        videoArgs.push(cfg.qpFlag + ' ' + el('hwQP').value);
+        videoArgs.push('-b:v ' + num(el('hwBitrate').value, '5M'));
       }
     } else {
-      const hwbr = num(el('hwBitrate').value, '5M');
-      videoArgs.push('-b:v ' + hwbr);
-      let hmr = num(el('hwMaxrate').value);
-      let hbs = num(el('hwBufsize').value);
-      // QSV turns on CBR itself when maxrate equals the bitrate
-      if (fam === 'qsv' && rc === 'cbr') {
-        if (!hmr) hmr = hwbr;
-        if (!hbs) hbs = doubleBitrate(hwbr);
+      // With boost, NVENC CQP switches to quality-mode VBR: -cq behaves like
+      // CRF (bitrate floats) and looks better than constant QP
+      if (cfg.rcMap) {
+        const rcVal = (boost && fam === 'nvenc' && rc === 'cqp') ? 'vbr' : cfg.rcMap[rc];
+        videoArgs.push('-rc ' + rcVal);
       }
-      if (hmr) videoArgs.push('-maxrate ' + hmr);
-      if (hbs) videoArgs.push('-bufsize ' + hbs);
+      if (rc === 'cqp') {
+        if (fam === 'amf') {
+          const qp = el('hwQP').value;
+          videoArgs.push('-qp_i ' + qp, '-qp_p ' + qp);
+          if (enc === 'h264_amf' || enc === 'av1_amf') videoArgs.push('-qp_b ' + qp);
+        } else if (fam === 'nvenc' && boost) {
+          videoArgs.push('-cq ' + el('hwQP').value, '-b:v 0');
+        } else {
+          videoArgs.push(cfg.qpFlag + ' ' + el('hwQP').value);
+        }
+      } else {
+        const hwbr = num(el('hwBitrate').value, '5M');
+        videoArgs.push('-b:v ' + hwbr);
+        let hmr = num(el('hwMaxrate').value);
+        let hbs = num(el('hwBufsize').value);
+        // QSV turns on CBR itself when maxrate equals the bitrate
+        if (fam === 'qsv' && rc === 'cbr') {
+          if (!hmr) hmr = hwbr;
+          if (!hbs) hbs = doubleBitrate(hwbr);
+        }
+        if (hmr) videoArgs.push('-maxrate ' + hmr);
+        if (hbs) videoArgs.push('-bufsize ' + hbs);
+      }
+      videoArgs.push(cfg.presetFlag + ' ' + el('hwPreset').value);
+      if (boost) videoArgs.push(...hwQualityBoostFlags(enc));
     }
-    videoArgs.push(cfg.presetFlag + ' ' + el('hwPreset').value);
-    if (boost) videoArgs.push(...hwQualityBoostFlags(enc));
   }
 
   // Common video
@@ -1443,6 +1507,10 @@ function bindAll() {
     el('faststart').checked = containerValue() === 'mp4';
     updateUI();
   });
+
+  // Rate-mode radios are rebuilt when switching between software and
+  // VideoToolbox, so listen on their stable parent rather than each input.
+  el('rateModeRadio').addEventListener('change', updateUI);
 
   // All inputs trigger UI update
   const inputs = document.querySelectorAll('input, select, textarea');
